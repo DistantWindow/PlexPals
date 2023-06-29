@@ -38,7 +38,7 @@ $DoneFolder = "done" #specify a subfolder name that will be created within each 
                      #old files after transcoding (ie done to use %BaseDownloadPath%\%foundFolder%\done)
 $OutFolder = "out" #specify a subfolder name that will be created within each found folder to save the new 
                    #transcoded file after transcoding and any found or processed SRTs
-$SubsWorkFolder = "subs" #specify a working folder for .en.mp4 (Discovery Plus-formatted webvtt files) to be 
+$SubsWorkFolder = "subs" #specify a working folder for .en.mp4 (containerized webvtt files) to be 
                          #stored for processing
 $vttworkFolder = "subs\vtt" #specify a sub-working folder for .vtt subtitles to be stored for processing to SRT
 
@@ -115,7 +115,7 @@ foreach ($folder in $folderList) {
             
             write-host $item.fullname " " $fileNameExt
 
-            #see if the file is a Discovery Plus en.mp4-formatted subtitle, and if so convert to SRT
+            #see if the file is an en.mp4-formatted subtitle, and if so convert to SRT
             if ($fileNameExt.Contains(".en.mp4")) {
                 write-host "Found subtitle "$fileNameExt
                 $currMP4Work = join-path $mp4SubWorkDir $fileNameExt
