@@ -1,4 +1,8 @@
-﻿##############################################
+﻿#=================================================#
+#          SUPER-MEGA BATCH TRANSCODER            #
+#=================================================#
+
+##############################################
 # This script will handle batch transcoding of video files into the handy, space-saving X265 format using FFMPEG.
 # It expects a particular structure - point the script to a starting $BaseDownloadPath in the config args below,
 # and from there it will look for subfolders within that folder. Each folder should contain at least one video file.
@@ -10,7 +14,7 @@
 #
 # The files will be transcoded using the CRF specifed below. MKVs will be converted to MKV with all their original
 # streams (subtitles, audio, etc) included, and any other specified video formats will be converted to MP4.
-# For subtitles downloaded from Discovery Plus, these come in a weird .en.mp4 container which will be converted to SRT.
+# For subtitles downloaded from some sources, they may come in a weird .en.mp4 container which will be converted to SRT.
 #
 # To-do - add some logging to capture the starting size/duration, ending size/duration, transcode time, and other details
 #         to a CSV
@@ -57,26 +61,22 @@ foreach ($folder in $folderList) {
     write-host "======="
     
     #reset some values to null to prevent weird looping path bugs
-    {
     $subfolderContents = $null
     $mp4SubWorkDir = $null
     $vttSubWorkDir = $null
     $currDoneDir = $null
     $currOutDir = $null
-    }
+    
 
     #set folder-specific paths for working directories
-    {
     $fullFolderPath = $folder.FullName
     $mp4SubWorkDir = join-path $fullFolderPath $SubsWorkFolder
     $vttSubWorkDir = join-path $fullFolderPath $vttworkFolder
     $currDoneDir = join-path $fullFolderPath $DoneFolder
     $currOutDir = join-path $fullFolderPath $OutFolder
     $currDoneSubsDir = [IO.Path]::Combine($fullFolderPath,$DoneFolder,$SubsWorkFolder)
-    }
 
     #make sure working directories within each folder are created
-    {
     If(!(test-path -PathType container $mp4SubWorkDir)) #make sure \subs folder exists
         {
         New-Item -ItemType Directory -Path $mp4SubWorkDir
@@ -100,7 +100,6 @@ foreach ($folder in $folderList) {
     If(!(test-path -PathType container $currDoneSubsDir)) #make sure \done\subs folder exists
         {
         New-Item -ItemType Directory -Path $currDoneSubsDir
-        }
         }
 
     #get folder contents
