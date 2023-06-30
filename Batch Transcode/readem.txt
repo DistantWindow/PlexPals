@@ -1,0 +1,44 @@
+#=================================================#
+#          SUPER-MEGA BATCH TRANSCODER            #
+#=================================================#
+
+REQUIRED SOFTWARE - 
+MP4Box (https://gpac.wp.imt.fr/downloads/) (used for transcoding subtitles from encapsulated webvtt format)
+FFMPEG (https://ffmpeg.org/download.html)
+
+This script will batch-transcode groups of files into the x265 HEVC format, and convert mp4-encoded subtitles into SRT's.
+
+USAGE
+
+1 - Download and install MP4Box and FFMPEG
+
+2 - Update the values $MP4BoxPath and $FFMpegPath to point to the above programs
+
+3 - Specify a location to work from at $BaseInputPath. Files to process should be within subfolders in this 
+    folder (one or multiple files per subfolder)
+
+4 - If you have video formats other than those listed that you wish to transcode, add them to the list of $otherVideoFormats
+
+5 - Set $x265CRF to the CRF value you want to transcode at. This is a compression factor from 0 (no compression) to 36 (maximum).
+
+6 - If not already done, move files you wish to transcode into subfolders within your input folder.
+    A single subfolder can contain one or more files.
+
+7 - Right-click the .ps1 file and choose Run With Powershell.
+
+8 - The script will find all subfolders in the target folder, then go through all the files in that subfolder.
+
+9 - If the file is *.en.mp4-formatted subtitle, MP4Box will be used to first convert that to a raw VTT file, then use
+    FFMPEG to conver that into an SRT.
+
+10 - Any MKV files will be processed into an MKV file, mapping all of its contained streams (audio, subtitle, etc) into the new MKV
+
+11 - Any video filetypes listed in the $otherVideoFormats list will be transcoded to x265 MP4.
+
+12 - Any other files won't be touched.
+
+13 - The original files that have been successfully processed will be moved to the "done" subfolder.
+     Finished, transcoded files will be moved to the "out" subfolder.
+
+14 - Once everything in the subfolder is processed, you can validate the work in the "out" folder and then delete "done" if everything
+     looks good.

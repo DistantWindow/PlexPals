@@ -1,0 +1,33 @@
+#=================================================#
+#            BATCH YT-DLP DOWNLOADER              #
+#=================================================#
+
+Required Software: 
+YT-DLP (https://github.com/yt-dlp/yt-dlp)
+
+Usage:
+1 - Install YT-DLP
+2 - Edit the Powershell script and update the Configuration section as desired.
+  --Provide the location to download to at $DownloadBase
+  --Enter the location to read the lists of URLs from at $InputBase
+  --Provide the location of YT-DLP at $ytDlpPath
+  --If you want YT-DLP to attempt to add a Season identifier to the prefix of each file, set $PrefixSeasonNo to $true
+  --Set the options for $formatArgs, $cookieArgs, $subtitleArgs, and $naming format as desired.
+    Refer to the YT-DLP documentation for more information on how to set these.
+
+3 - Save a list of URLs to download via YT-DLP in a new text file. If the file represents a season of something, end the filename
+    with the season in "SXX" format (ie "GoodEatsS12")
+
+4 - Save the text file in the location provided above for $InputBase
+
+5 - Repeat steps 3-5 as needed.
+
+6 - Right-click DownloadBatches.ps1 and click Run with Powershell
+
+7 - Each text file in your Input folder will be processed via YT-DLP.
+    The contents of each file will download to a seperate subfolder in the specified download location, with the same name as the
+    text file.
+
+8 - If $PrefixSeasonNo is true, the season indicator (eg S04) from the text file will be used as a prefix for each file in that batch.
+    YT-DLP doesn't have a reliable way to number episodes so by default an episode tag of "EXX" will be added after the season prefix,
+    followed by the chosen naming format. If $prefixSeasonNo is $false, only the naming format will be used.
