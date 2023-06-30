@@ -7,7 +7,7 @@ Chromecast, or Smart TV players). The fix is to remux the MP4 into an MKV file, 
 and prevents the stuttering, framey playback.
 
 Required Software: 
-MKVMerge (https://mkvtoolnix.download/doc/mkvmerge.html)
+MKVMerge (https://mkvtoolnix.download/downloads.html)
 
 Usage:
 1 - Install MKVMerge
