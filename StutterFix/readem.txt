@@ -15,8 +15,8 @@ Usage:
 2 - Edit the Powershell script and update the $mkvMergePath to point to mkvmerge.exe
 
 3 - When you encounter a file that is having this issue, copy and paste the remux script into the location where the file is.
-  --Currently it is designed for movies, expecting one mp4 file and one or two subtitles. If this issue is happening with a TV series, for now,
-    create a temporary subfolder to drop a single episode into at a time. I plan to fix this soon.
+  --The script will affect all files in the current folder. If it's a season of TV for instance, with 10 videos and 10 subtitles,
+    each will be paired up and remuxed into a separate .mkv
 
 4 - With the script, the affected video, and its subtitles all in one place, right-click the script and Run With Powershell
 
