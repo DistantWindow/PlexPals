@@ -1,0 +1,26 @@
+#=================================================#
+#            HEVC STUTTER FIX - REMUXER           #
+#=================================================#
+
+Sometimes, an .MP4 file in x265 HEVC format will not play correctly on Plex apps (such as Android,
+Chromecast, or Smart TV players). The fix is to remux the MP4 into an MKV file, which does... something
+and prevents the stuttering, framey playback.
+
+Required Software: 
+MKVMerge (https://mkvtoolnix.download/doc/mkvmerge.html)
+
+Usage:
+1 - Install MKVMerge
+
+2 - Edit the Powershell script and update the $mkvMergePath to point to mkvmerge.exe
+
+3 - When you encounter a file that is having this issue, copy and paste the remux script into the location where the file is.
+  --Currently it is designed for movies, expecting one mp4 file and one or two subtitles. If this issue is happening with a TV series, for now,
+    create a temporary subfolder to drop a single episode into at a time. I plan to fix this soon.
+
+4 - With the script, the affected video, and its subtitles all in one place, right-click the script and Run With Powershell
+
+5 - The script will look for an .mp4, and then identify all .srt files with the same name, and bundle all of these into an MKV file with MKVMerge.
+    This takes about a minute to run usually.
+
+6 - Delete the mp4 file and rescan your Plex library to pick up the new MKV. The stuttering should now be gone.
