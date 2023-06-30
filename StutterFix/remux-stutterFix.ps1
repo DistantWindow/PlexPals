@@ -19,41 +19,32 @@ foreach ($videoFile in $videoFiles) {
     # Check if any matching subtitle files were found
     if ($matchingSubtitles) {
         # Create the output MKV file path
-        $outputFile = '"'
-        $outputFile += "$baseName.mkv"
-        $outputFile += '"'
+        $outputFileNoQ = "$($baseName).mkv"
+        $outputFile = "`"$($outputFileNoQ)`""
 
-        $inputFile = '"'
-        $inputFile += $videoFile.Name
-        $inputFile += '"'
+        $inputFile += "`"$($videoFile.Name)`""
 
         # Build the argument list for mkvmerge
         $arguments = @("-o", $outputFile, $inputFile)
-        foreach ($subtitle in $matchingSubtitles) {
-            $subFile = '"'
-            $subFile += $subtitle.Name
-            $subFile += '"'
+         foreach ($subtitle in $matchingSubtitles) {
+            $subFile = "`"$($subtitle.Name)`""
 
-            $arguments += $subFile
-           
+            $arguments += $subFile           
         }
         $arguments += "--default-language en --language 1:en"
 
         # Execute the mkvmerge command to remux the files
         
-        $mergeCommand = "$($mkvmergePath)"
-        $mergeCommand += " "
-        $mergeCommand += $arguments
+        $mergeCommand = "$($mkvmergePath) $($arguments)"
         Write-Host $mergeCommand
-        Start-Process -FilePath $mkvmergePath -ArgumentList $arguments -Wait
-        #cmd /c $mergeCommand
-
+        #Start-Process -FilePath $mkvmergePath -ArgumentList $arguments -Wait
+        
 } 
 else 
 {
  write-host "No subtitles found"
   }}
-if (Test-Path -Path $outputFile -PathType Leaf)
+if (Test-Path -Path $outputFileNoQ -PathType Leaf)
         {
         Write-Host "Remuxed files: $($videoFile.Name), $($matchingSubtitles.Count) subtitles => $outputFile"
     } else {
