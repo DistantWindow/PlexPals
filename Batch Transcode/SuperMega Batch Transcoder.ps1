@@ -112,7 +112,11 @@ foreach ($folder in $folderList) {
             $fullFileName = $item.FullName
             $fileNameExt = $item.Name
             $baseFileName = $item.BaseName
-            
+
+            #see if current file is one of the defined video formats
+            $isAVideo = ($otherVideoFormats | %{$fileNameExt.contains($_)}) -contains $true
+            write-host "is a video? "$isAVideo
+
             write-host $item.fullname " " $fileNameExt
 
             #see if the file is an en.mp4-formatted subtitle, and if so convert to SRT
@@ -181,13 +185,11 @@ foreach ($folder in $folderList) {
              }
             
             #transcode other video files to x265 and move old file to /done
-            $isAVideo = ($otherVideoFormats | %{$fileNameExt.contains($_)}) -contains $true
-            write-host "is a video? "$isAVideo
             elseif ($isAVideo -eq $true -and -not($fileNameExt.Contains(".en"))) {
                 
                 write-host $fileNameExt
                 $currEpisodeIn = $fullFileName
-                $mp4OutputName = "$($baseName).mp4"
+                $mp4OutputName = "$($baseFileName).mp4"
                 $currEpisodeDone = join-path $currDoneDir $fileNameExt
                 $currEpisodeOut = join-path $currOutDir $mp4OutputName
                 write-host $currEpisodeDone
