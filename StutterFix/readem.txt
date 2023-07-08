@@ -3,24 +3,45 @@
 #=================================================#
 
 Sometimes, an .MP4 file in x265 HEVC format will not play correctly on Plex apps (such as Android,
-Chromecast, or Smart TV players). The fix is to remux the MP4 into an MKV file, which does... something
+Chromecast, or Smart TV players); I've also run into issues with files not playing on some players because of a problem with a subtitle transcoder. 
+The fix is to remux the MP4 into an MKV file, which does... something
 and prevents the stuttering, framey playback.
+Or maybe you just want those slovenly mp4/srt pairs cleaned up into something charmingly, Swedishly sleek and minimalist. At any rate, these are for that.
 
 Required Software: 
 MKVMerge (https://mkvtoolnix.download/downloads.html)
 
 Usage:
+
+:::For Remux In Place - 
+
 1 - Install MKVMerge
 
 2 - Edit the Powershell script and update the $mkvMergePath to point to mkvmerge.exe
 
-3 - When you encounter a file that is having this issue, copy and paste the remux script into the location where the file is.
+3 - When you encounter a file that is having this issue, copy and paste the remux-inPlace script into the location where the file is.
   --The script will affect all files in the current folder. If it's a season of TV for instance, with 10 videos and 10 subtitles,
     each will be paired up and remuxed into a separate .mkv
 
 4 - With the script, the affected video, and its subtitles all in one place, right-click the script and Run With Powershell
 
 5 - The script will look for an .mp4, and then identify all .srt files with the same name, and bundle all of these into an MKV file with MKVMerge.
-    This takes about a minute to run usually.
+    This usually takes a little less than a minute per video
+
+6 - Delete the mp4 file and rescan your Plex library to pick up the new MKV. The stuttering should now be gone.
+
+:::For Batch Remux - 
+
+1 - Install MKVMerge
+
+2 - Edit the Powershell script and update the $mkvMergePath to point to mkvmerge.exe
+  - Edit the $batchPath to point to a txt file containing lists of directories (ie remuxList.txt)
+
+3 - Add all directories containing files to remux to your remuxList.txt file.
+
+4 - Right-click the remuxBatch.ps1 script and Run with Powershell.
+
+5 - The script will check each folder provided for mp4 files and any matching SRTs, and bundle all of these into an MKV file with MKVMerge.
+    This usually takes a little less than a minute per video 
 
 6 - Delete the mp4 file and rescan your Plex library to pick up the new MKV. The stuttering should now be gone.
