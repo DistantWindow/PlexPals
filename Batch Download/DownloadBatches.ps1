@@ -27,40 +27,53 @@
 ######################################################################
 
 #=================================================#
-#                  CONFIGURATION                  #
+#                CONFIGURATION                    #
 #=================================================#
+# The below values are read from the config.ini. Review
+# the comments within the config for more details on formatting 
+# and what each does
 
-#provide the base location to download to
-$DownloadBase = "E:\YTDLP\Download"
+Clear-Host # reset the console window, helps with debugging in Powershell ISE
 
-#provide the location where txt files listing urls to download are saved
-$InputBase = "F:\Downloads\YTDLP\Seasons"
+# read the config file
+$configFile = "config.ini"
+Get-Content $configFile | foreach-object -begin {$config=@{}} -process {
+    $line = $_.Trim()
+    if(-not $line.StartsWith("#") -and $line -notmatch '^\s*$' -and $line -notmatch '^\[') {
+        $k, $v = $line -split '=', 2
+        if(($k.Trim().CompareTo("") -ne 0) -and ($k.Trim().StartsWith("[") -ne $True)) {
+            $config.Add($k.Trim(), $v.Trim())
+        }
+    }
+}
+
+# assign config values to script variables
+$DownloadBase = $config.DownloadBase
+
+$InputBase = $config.InputBase
 $InputDone = Join-Path $InputBase "done"
 
-#provide the path to yt-dlp.exe
-$ytDlpPath = "F:\Downloads\YTDLP\yt-dlp.exe"
+$ytDlpPath = $config.ytDlpPath
 
-#select if a detected season number (in "SXX" format) should be added to file names
-$PrefixSeasonNo = $true
+$PrefixSeasonNo = $config.PrefixSeasonNo
 
-#set global YTDLP argument values
-$formatArgs = "--format `"bv*[height<=1080]+ba/b`"" # video formats to download. default finds best version up to 1080p. comment out this line to get best quality regardless of size.
-$cookieArgs = "--cookies-from-browser Firefox" # where to retrieve cookies for sites that need them. Firefox recommended, Chrome cookie store is encrypted since latest update
-$subtitleArgs = "--write-sub --write-auto-sub --sub-lang `"en.*`" --embed-subs" # if subtitles should be downloaded. default is to download the English subtitle.
-$namingFormat = "%(title)s.%(ext)s" # how to name the file using dynamic values from the video. refer to yt-dlp documentation for more options.
+$formatArgs = $config.formatArgs
+$cookieArgs = $config.cookieArgs
+$subtitleArgs = $config.subtitleArgs
+$namingFormat = $config.namingFormat
 
 #=================================================#
 #                  EXECUTION START                #
 #=================================================#
 
-#create input/done if it doesn't exist
+# create input/done if it doesn't exist
 If(!(test-path -PathType container $InputDone)) 
    {New-Item -ItemType Directory -Path $InputDone}
 
-#get all the input file lists from input
+# get all the input file lists from input
 $batchLists = Get-ChildItem $InputBase -Attributes !Directory
 
-#iterate each and download them to a separate folder
+# iterate each and download them to a separate folder
 foreach ($txtfile in $batchLists) {
 write-host $txtfile
 write-host $txtfile.FullName
@@ -74,7 +87,7 @@ $listSource = $null
 $ytDlpArgs = $null
 
 
-#get the show/season name from the text file
+# get the show/season name from the text file
 
 $playlistFile = $txtfile.FullName
 write-host $playlistFile
@@ -92,15 +105,15 @@ $showName = $txtfile.basename
         }
 
  
-#set the path to download to based on the show/season
+# set the path to download to based on the show/season
 $seasonDLPath = Join-Path $DownloadBase $showName
 Write-host $seasonDLPath
 write-host $playlistFile
 
-#build the episode-specific arguments
+# build the episode-specific arguments
 
 
-   #if prefix is true, and season number is provided, use it
+   # if prefix is true, and season number is provided, use it
    if ($PrefixSeasonNo -eq $true -and -not($seasonNumber -eq $null)) {
       $episodeName = "$($seasonNumber)EXX $($namingFormat)"
          } else {
@@ -109,17 +122,17 @@ write-host $playlistFile
         
 
 $episodeDLPath = "`"$($seasonDLPath)\$($episodeName)`"" # build output path for the current video
-$outputArgs = "-o",$episodeDLPath #download each episode in a text file to a specific folder
+$outputArgs = "-o",$episodeDLPath # download each episode in a text file to a specific folder
 $listPath = "`"$($playlistFile)`"" 
 write-host $listPath
-$listSource = "-a",$listPath #get video URLs to download from the current iterated text file
+$listSource = "-a",$listPath # get video URLs to download from the current iterated text file
 
 
 $ytDlpArgs = [string]::Concat($formatArgs,' ',$cookieArgs,' ',$subtitleArgs,' ',$outputArgs,' ',$listSource)
 write-host "args:",$ytDlpArgs
 write-host "===="
 
-#run YT-DLP with the constructed arguments
+# run YT-DLP with the constructed arguments
 try{
 $runYTDlp = Start-Process -FilePath $ytDlpPath -argumentlist $ytDlpArgs -nonewwindow -wait -passthru
 write-host "Finished downloading all episodes from",$showName

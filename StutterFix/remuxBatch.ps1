@@ -1,8 +1,47 @@
-clear-host
-# Define the path to mkvmerge
-$mkvmergePath = "F:\Programs\MKVToolNix\mkvmerge.exe"
-$batchPath = "J:\Utilities\remuxList.txt"
+#=================================================#
+#           BATCH REMUXER/STUTTERFIX              #
+#=================================================#
 
+##############################################
+# This Pal will read a list of file paths from a specified text file, and then go through each of those
+# and remux the contained mp4/srt pairs into MKV files. This will work either for single videos or for seasons
+# with multiple videos and subtitles per folder.
+#
+# Start by creating a new text file containing a list of the folders that contain files to Remux.
+# Indicate the path to this file in the config.ini file.
+# Right-click the script and Run with Powershell, and it will process all listed items.
+#
+# After completion, you can delete the original mp4/SRT files. The script doesn't do this automatically in case of any issue.
+##############################################
+
+#=================================================#
+#                CONFIGURATION                    #
+#=================================================#
+# The below values are read from the config.ini. Review
+# the comments within the config for more details on formatting 
+# and what each does
+
+Clear-Host # reset the console window, helps with debugging in Powershell ISE
+
+# read the config file
+$configFile = "config.ini"
+Get-Content $configFile | foreach-object -begin {$config=@{}} -process {
+    $line = $_.Trim()
+    if(-not $line.StartsWith("#") -and $line -notmatch '^\s*$' -and $line -notmatch '^\[') {
+        $k, $v = $line -split '=', 2
+        if(($k.Trim().CompareTo("") -ne 0) -and ($k.Trim().StartsWith("[") -ne $True)) {
+            $config.Add($k.Trim(), $v.Trim())
+        }
+    }
+}
+
+# assign config values to script variables
+$mkvmergePath = $config.mkvmergePath
+$batchPath = $config.batchPath
+
+#=================================================#
+#                EXECUTION START                  #
+#=================================================#
 # Get the current working directory
 (get-content $batchPath)| ForEach-Object {
 $errorCount= 0

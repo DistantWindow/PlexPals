@@ -6,7 +6,7 @@
 #
 # Use this Pal to generate random thumbnails/screenshots from
 # all videos in a source directory. Specify the Config values
-# below, then right-click the script and Run in Powershell.
+# in the ini, then right-click the script and Run in Powershell.
 # The screenshots will be captured and output to the chosen 
 # directory. If you aren't satisfied with any of them, simply 
 # delete them and run the script again with some different
@@ -17,25 +17,40 @@
 # structure will be recreated in the specified output location.
 #########################################################
 
-###########################################################
-#                      CONFIGURATION                      #
-###########################################################
+#=================================================#
+#                CONFIGURATION                    #
+#=================================================#
+# The below values are read from the config.ini. Review
+# the comments within the config for more details on formatting 
+# and what each does
 
-Clear-Host
+Clear-Host # reset the console window, helps with debugging in Powershell ISE
 
-# specify the location of ffmpeg.exe
- $ffmpegLocation = "J:\Utilities\Apps\ffmpeg.exe"
+# read the config file
+$configFile = "config.ini"
+Get-Content $configFile | foreach-object -begin {$config=@{}} -process {
+    $line = $_.Trim()
+    if(-not $line.StartsWith("#") -and $line -notmatch '^\s*$' -and $line -notmatch '^\[') {
+        $k, $v = $line -split '=', 2
+        if(($k.Trim().CompareTo("") -ne 0) -and ($k.Trim().StartsWith("[") -ne $True)) {
+            $config.Add($k.Trim(), $v.Trim())
+        }
+    }
+}
+
+# assign config values to script variables
+ $ffmpegLocation = $config.ffmpegLocation
 # specify the location to find the video files
- $workPath = "J:\TV\Good Eats"
+ $workPath = $config.workPath
 # specify where the output should be stored
- $outputPath = "J:\Utilities\Thumbnails"
+ $outputPath = $config.outputPath
 
 # the timecode to pull the first screenshot from, in 00:00:0.00 format (HH:MM:SS.mm)
- $screenshotTimeCode = [timespan]"00:00:03.00" 
+ $screenshotTimeCode = [timespan]$config.screenshotTimeCode 
 # if multiple screenshots should be taken, enter the value here. to take just one, enter 1.
- $numberOfScreens = 10 
+ $numberOfScreens = $config.numberOfScreens
 # if doing multiple screenshots, the delay to add between each, in 00:00:00.00 format (HH:MM:SS.mm)
- $screenshotDelay = [timespan]"00:00:45.15" 
+ $screenshotDelay = [timespan]$config.screenshotDelay 
 
 ###########################################################
 #                      EXECUTION                          #

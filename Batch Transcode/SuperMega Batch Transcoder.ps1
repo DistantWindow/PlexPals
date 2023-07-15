@@ -4,15 +4,15 @@
 
 ##############################################
 # This script will handle batch transcoding of video files into the handy, space-saving X265 format using FFMPEG.
-# It expects a particular structure - point the script to a starting $BaseDownloadPath in the config args below,
+# It expects a particular structure - point the script to a starting $BaseDownloadPath in the config file,
 # and from there it will look for subfolders within that folder. Each folder should contain at least one video file.
 #
 # For instance if your base folder is ToTranscode\, put OversizedMovie.mp4 into a subfolder "OverSizedMovie" of that
 # directory, or put Season 2 of Oversized TV Show into a folder OversizedTVS02. The script will scan each subfolder, 
 # find files it can handle, process things into the correct format, and put the finished files in an "out" subfolder 
-# and move the old files into a "done" subfolder that can beleted after validating the output looks how you want.
+# and move the old files into a "done" subfolder that can be deleted after validating the output looks how you want.
 #
-# The files will be transcoded using the CRF specifed below. MKVs will be converted to MKV with all their original
+# The files will be transcoded using the CRF specifed in the config. MKVs will be converted to MKV with all their original
 # streams (subtitles, audio, etc) included, and any other specified video formats will be converted to MP4.
 # For subtitles downloaded from some sources, they may come in a weird .en.mp4 container which will be converted to SRT.
 #
@@ -24,28 +24,44 @@
 #=================================================#
 #                CONFIGURATION                    #
 #=================================================#
+# The below values are read from the config.ini. Review
+# the comments within the config for more details on formatting 
+# and what each does
 
-$MP4BoxPath = "F:\Programs\GPAC\mp4box.exe" #point to the location where mp4box.exe lives
+Clear-Host # reset the console window, helps with debugging in Powershell ISE
 
-$FFMpegPath = "F:\Downloads\YTDLP\ffmpeg.exe" # point to the location where ffmpeg.exe lives
+# read the config file
+$configFile = "config.ini"
+Get-Content $configFile | foreach-object -begin {$config=@{}} -process {
+    $line = $_.Trim()
+    if(-not $line.StartsWith("#") -and $line -notmatch '^\s*$' -and $line -notmatch '^\[') {
+        $k, $v = $line -split '=', 2
+        if(($k.Trim().CompareTo("") -ne 0) -and ($k.Trim().StartsWith("[") -ne $True)) {
+            $config.Add($k.Trim(), $v.Trim())
+        }
+    }
+}
 
-$BaseDownloadPath = "E:\YTDLP\Download" # point to the location where subfolders containing files to process are located
+# assign config values to script variables
+$MP4BoxPath = $config.MP4BoxPath
 
-$otherVideoFormats = @(".mp4",".avi",".mov",".webm") #specify other filetypes (besides mkv which is handled
-                                                     #separately) that should be treated as videos and 
-                                                     #transcoded to x265 MP4s
-$DoneFolder = "done" #specify a subfolder name that will be created within each found folder to backup the
-                     #old files after transcoding (ie done to use %BaseDownloadPath%\%foundFolder%\done)
-$OutFolder = "out" #specify a subfolder name that will be created within each found folder to save the new 
-                   #transcoded file after transcoding and any found or processed SRTs
-$SubsWorkFolder = "subs" #specify a working folder for .en.mp4 (containerized webvtt files) to be 
-                         #stored for processing
+$FFMpegPath = $config.FFMpegPath
+
+$BaseDownloadPath = $config.BaseDownloadPath 
+
+$otherVideoFormats = $config.validVideoFormats.Split() 
+
+$DoneFolder = "done" #specify a subfolder name that will be created within each found folder to backup the old files after transcoding (ie done to use %BaseDownloadPath%\%foundFolder%\done)
+
+$OutFolder = "out" #specify a subfolder name that will be created within each found folder to save the new transcoded file after transcoding and any found or processed SRTs
+
+$SubsWorkFolder = "subs" #specify a working folder for .en.mp4 (containerized webvtt files) to be stored for processing
+
 $vttworkFolder = "subs\vtt" #specify a sub-working folder for .vtt subtitles to be stored for processing to SRT
 
-$x265CRF = "20" #specify the CRF factor to use when encoding. Ranges from 0 (no compression/lossless) to 36  
-                #(maximum compression). Default is 20, a good balance of size savings with little to no 
-                #discernable loss of quality
-$LogPath = Join-Path $BaseDownloadPath "OutputLog.csv" #not used yet, location to save output log
+$x265CRF = $config.x265CRF 
+
+$LogPath = Join-Path $BaseDownloadPath $config.LogPath 
 
 #=================================================#
 #                EXECUTION START                  #
