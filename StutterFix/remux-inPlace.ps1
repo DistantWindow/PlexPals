@@ -14,6 +14,7 @@ foreach ($videoFile in $videoFiles) {
     #reset the arguments
     $arguments = $null
     $mergeCommand = $null
+    $subCount=1
 
     # Get the base name of the mp4 file (without the extension)
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($videoFile.Name)
@@ -32,15 +33,27 @@ foreach ($videoFile in $videoFiles) {
 
     # Check if any matching subtitle files were found
     if ($matchingSubtitles) {
-       
+       $matchingSubtitles
         # Build the argument list for mkvmerge
        
          foreach ($subtitle in $matchingSubtitles) {
             $subFile = "`"$($subtitle.Name)`""
+            $subBaseName = $subtitle.baseName
 
-            $arguments += $subFile           
+                #try to determine language
+                $subLang = $subBaseName.split('.')[1]
+                if ([string]::IsNullOrEmpty($subLang)) {
+                $subLang = "und"
+                }
+            $currentSubtitle = "--language 0:$($subLang) $($subFile) "
+            write-host $currentSubtitle
+
+            $arguments += $currentSubtitle
+            write-host $arguments
+            write-host "===="
         }
-        $arguments += "--default-language en --language 1:en"        
+      
+        
         } 
           else 
             {

@@ -59,11 +59,11 @@ Get-Content $configFile | foreach-object -begin {$config=@{}} -process {
 # assign config values to script variables
 $MP4BoxPath = $gconfig.MP4BoxPath
 
-$FFMpegPath = $gconfig.FFMpegPath
+$FFMpegPath = $gconfig.ffmpegLocation
 
 $BaseDownloadPath = $config.BaseDownloadPath 
 
-$otherVideoFormats = $config.validVideoFormats.Split() 
+$otherVideoFormats = $config.validVideoFormats.Split(",") 
 
 $DoneFolder = "done" #specify a subfolder name that will be created within each found folder to backup the old files after transcoding (ie done to use %BaseDownloadPath%\%foundFolder%\done)
 
@@ -188,6 +188,28 @@ foreach ($folder in $folderList) {
                     #move vtt sub to done/subs
                   move-item -literalpath $currVTTWork -destination $currVTTDone
                 }
+
+            #convert vtt to SRT
+            elseif ($fileNameExt.Contains(".vtt")) {
+                    $vttFileName = "$($baseFileName).vtt"
+                    $currVTTWork = $fullFileName
+                    $currVTTDone = join-path $currDoneSubsDir $vttFileName
+                    write-host $currVTTWork
+                    write-host $currVTTDone
+
+                #convert the vtt sub to srt with ffmpeg
+                    $srtFileName = "$($baseFileName).srt"
+                    $srtDonePath = join-path $currOutDir $srtFileName
+                    write-host $srtDonePath
+
+                #ffmpeg steps
+                   	$ffmpegArgs = "-i `"$($currVTTWork)`" `"$($srtDonePath)`""	
+                    write-host $ffmpegArgs
+	               $ffmpegProcess = Start-Process -FilePath $FFMpegPath -ArgumentList $ffmpegArgs -NoNewWindow -wait
+
+                #move vtt sub to done/subs
+                  move-item -literalpath $currVTTWork -destination $currVTTDone
+            }
 
             #move existing SRTs to /out
             elseif ($fileNameExt.Contains(".srt")) {
