@@ -92,25 +92,33 @@ foreach ($videoFile in $videoFiles) {
     # Get the matching subtitle files
     $matchingSubtitles = $subtitles | Where-Object { $_.BaseName -like "*$baseName*" }
 
-    # Check if any matching subtitle files were found
     if ($matchingSubtitles) {
-       
+       $matchingSubtitles
         # Build the argument list for mkvmerge
        
          foreach ($subtitle in $matchingSubtitles) {
             $subNameNoQ = $subtitle.Name
             $subPathNoQ = Join-Path $currentDirectory $subNameNoQ
             $subFile = "`"$($subPathNoQ)`""
+            $subBaseName = $subtitle.baseName
 
-            $arguments += $subFile           
-        }
-        $arguments += "--default-language en --language 1:en"        
-        } 
+                #try to determine language
+                $subLang = $subBaseName.split('.')[1]
+                if ([string]::IsNullOrEmpty($subLang)) {
+                $subLang = "und"
+                }
+            $currentSubtitle = "--language 0:$($subLang) $($subFile) "
+            write-host $currentSubtitle
+
+            $arguments += $currentSubtitle
+            write-host $arguments
+            write-host "===="
+        }}
           else 
             {
             write-host "No subtitles found"
           }
-
+          
 # Execute the mkvmerge command to remux the files
 $mergeCommand = "$($mkvmergePath) $($arguments)"
 Write-Host $mergeCommand
