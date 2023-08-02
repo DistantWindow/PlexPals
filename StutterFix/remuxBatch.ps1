@@ -92,33 +92,67 @@ foreach ($videoFile in $videoFiles) {
     # Get the matching subtitle files
     $matchingSubtitles = $subtitles | Where-Object { $_.BaseName -like "*$baseName*" }
 
+    # Check if any matching subtitle files were found
     if ($matchingSubtitles) {
        $matchingSubtitles
         # Build the argument list for mkvmerge
        
          foreach ($subtitle in $matchingSubtitles) {
+            $typeFlag = $null
+            $trackName = $null
             $subNameNoQ = $subtitle.Name
             $subPathNoQ = Join-Path $currentDirectory $subNameNoQ
             $subFile = "`"$($subPathNoQ)`""
             $subBaseName = $subtitle.baseName
 
+
                 #try to determine language
-                $subLang = $subBaseName.split('.')[1]
-                if ([string]::IsNullOrEmpty($subLang)) {
-                $subLang = "und"
-                }
-            $currentSubtitle = "--language 0:$($subLang) $($subFile) "
+                $subLang = $subBaseName.split('.')[-1]
+                write-host $subFile
+                write-host $subBaseName
+                write-host $subLang
+                write-host "------"
+                
+                # if the last element is a type tag such as SDH instead of a language, handle that
+                if (($subLang -eq "sdh") -or ($subLang -eq "forced") -or ($subLang -eq "cc")) {
+                        $subType = $subLang
+
+                        # set type flag for SDH/CC subtitles and Forced subtitles separately
+                         if (($subType -eq "sdh") -or ($subType -eq "cc")){
+                          $typeFlag = " --hearing-impaired-flag 0:yes "
+                          $trackName = " --track-name 0:SDH "
+                         } elseif ($subType -eq "forced"){
+                          $typeFlag = " --forced-display-flag 0:yes "
+                          $trackName = " --track-name 0:Forced "
+                         }
+                        
+                        #find the language on sdh/forced subtitles, moving through the array til a tag other than sdh/forced/cc is found
+                        $endOfArray=-1
+                            while (($subLang -eq "sdh") -or ($subLang -eq "forced") -or ($subLang -eq "cc")) {
+                            $endOfArray--
+                            write-host $endOfArray
+                            $subLang = $subBaseName.Split(".")[$endOfArray]
+                            write-host $subLang
+                                                        }
+                            }
+                            
+                            if ($subLang.length -gt 3) {
+                            throw "Did not find a valid language tag in subtitle file: $($subFile). Please review Plex documentation and ensure a 2- or 3-character language tag conforming to ISO 639-1 is provided."
+                            }
+            #build the command for the current subtitle
+            $currentSubtitle = "--language 0:$($subLang) $($typeFlag)$($trackName)$($subFile) "
             write-host $currentSubtitle
 
+            #add the current subtitle to the argument string
             $arguments += $currentSubtitle
             write-host $arguments
             write-host "===="
-        }}
+        }} 
           else 
             {
             write-host "No subtitles found"
           }
-          
+
 # Execute the mkvmerge command to remux the files
 $mergeCommand = "$($mkvmergePath) $($arguments)"
 Write-Host $mergeCommand
