@@ -52,7 +52,6 @@ Get-Content $configFile | foreach-object -begin {$config=@{}} -process {
 # assign config values to script variables
 $mkvmergePath = $gConfig.mkvmergePath
 $batchPath = $config.batchPath
-$filterFiletype = $config.filterFiletype
 
 #=================================================#
 #                EXECUTION START                  #
@@ -64,7 +63,7 @@ $currentDirectory = $_
 write-host $currentDirectory
 
 # Get all the mp4 and srt files in the current directory
-$videoFiles = Get-ChildItem -Path $currentDirectory -Filter $filterFiletype
+$videoFiles = Get-ChildItem -Path $currentDirectory -Filter "*.webm"
 $subtitles = Get-ChildItem -Path $currentDirectory -Filter "*.srt"
 
 # Iterate over the mp4 files

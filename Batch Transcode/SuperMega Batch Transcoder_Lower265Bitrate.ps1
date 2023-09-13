@@ -3,7 +3,8 @@
 #=================================================#
 
 ##############################################
-# This script will handle batch transcoding of video files into the handy, space-saving X265 format using FFMPEG.
+# This script will handle batch transcoding of video files already in the handy, space-saving X265 format 
+# into an even handier, smaller bitrate using FFMPEG.
 # It expects a particular structure - point the script to a starting $BaseDownloadPath in the config file,
 # and from there it will look for subfolders within that folder. Each folder should contain at least one video file.
 #
@@ -74,6 +75,10 @@ $SubsWorkFolder = "subs" #specify a working folder for .en.mp4 (containerized we
 $vttworkFolder = "subs\vtt" #specify a sub-working folder for .vtt subtitles to be stored for processing to SRT
 
 $x265CRF = $config.x265CRF 
+
+$targetBitrate = $config.targetBitrateV
+
+$targetBitrateAudio = $config.targetBitrateA
 
 $LogPath = Join-Path $BaseDownloadPath $config.LogPath 
 
@@ -230,10 +235,12 @@ foreach ($folder in $folderList) {
                 write-host $currEpisodeOut
                 
                 #do ffmmpeg steps
-                $ffmpegArgs = "-i `"$($currEpisodeIn)`" -map 0 -c:a copy -c:s copy -c:v libx265 -crf $($x265CRF) -vtag hvc1 `"$($currEpisodeOut)`""
-                write-host $ffmpegArgs
-                $ffmpegProcess = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgs -NoNewWindow -Wait -PassThru
-                move-item -literalpath $currEpisodeIn -destination $currEpisodeDone
+                $ffmpegArgsP1 = "-y -i `"$($currEpisodeIn)`" -preset slow -c:v libx265 -b:v $($targetBitrate) -x265-params pass=1 -an -f null NUL"
+                $ffmpegArgsP2 = "-i `"$($currEpisodeIn)`" -preset slow -c:v libx265 -b:v $($targetBitrate) -x265-params pass=2 -c:a aac -b:a $($targetBitrateAudio) `"$($currEpisodeOut)`""
+                write-host $ffmpegArgsP1
+                $ffmpegProcess1 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP1 -NoNewWindow -Wait -PassThru
+                $ffmpegProcess2 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP2 -NoNewWindow -Wait -PassThru
+               # move-item -literalpath $currEpisodeIn -destination $currEpisodeDone
              }
             
             #transcode other video files to x265 and move old file to /done
@@ -248,9 +255,11 @@ foreach ($folder in $folderList) {
                 write-host $currEpisodeOut
                 
                 #do ffmmpeg steps
-                $ffmpegArgs = "-i `"$($currEpisodeIn)`" -c:v libx265 -crf $($x265CRF) -vtag hvc1 `"$($currEpisodeOut)`""
-                write-host $ffmpegArgs
-                $ffmpegProcess = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgs -NoNewWindow -Wait -PassThru
+                $ffmpegArgsP1 = "-y -i `"$($currEpisodeIn)`" -preset slower -c:v libx265 -b:v $($targetBitrate) -x265-params pass=1 -an -f null NUL && ^"
+                $ffmpegArgsP2 = "-i `"$($currEpisodeIn)`" -preset slower -c:v libx265 -b:v $($targetBitrate) -x265-params pass=2 -c:a aac -b:a $($targetBitrateAudio) `"$($currEpisodeOut)`""
+                write-host $ffmpegArgsP1
+                $ffmpegProcess1 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP1 -NoNewWindow -Wait -PassThru
+                $ffmpegProcess2 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP2 -NoNewWindow -Wait -PassThru
                 move-item -literalpath $currEpisodeIn -destination $currEpisodeDone
                 }
 
