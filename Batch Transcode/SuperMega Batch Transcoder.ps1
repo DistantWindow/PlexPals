@@ -1,7 +1,7 @@
 ﻿#=================================================#
 #          SUPER-MEGA BATCH TRANSCODER            #
 #=================================================#
-
+#region introduction
 ##############################################
 # This script will handle batch transcoding of video files into the handy, space-saving X265 format using FFMPEG.
 # It expects a particular structure - point the script to a starting $BaseDownloadPath in the config file,
@@ -20,10 +20,11 @@
 #         to a CSV
 #
 ##############################################
-
+#endregion
 #=================================================#
 #                CONFIGURATION                    #
 #=================================================#
+#region Config Values
 # The below values are read from the config.ini. Review
 # the comments within the config for more details on formatting 
 # and what each does
@@ -61,9 +62,11 @@ $MP4BoxPath = $gconfig.MP4BoxPath
 
 $FFMpegPath = $gconfig.ffmpegLocation
 
+$FFProbePath = $gconfig.ffprobePath
+
 $BaseDownloadPath = $config.BaseDownloadPath 
 
-$otherVideoFormats = $config.validVideoFormats.Split(",") 
+$otherVideoFormats = $config.validVideoFormats.Split(",")
 
 $DoneFolder = "done" #specify a subfolder name that will be created within each found folder to backup the old files after transcoding (ie done to use %BaseDownloadPath%\%foundFolder%\done)
 
@@ -73,19 +76,209 @@ $SubsWorkFolder = "subs" #specify a working folder for .en.mp4 (containerized we
 
 $vttworkFolder = "subs\vtt" #specify a sub-working folder for .vtt subtitles to be stored for processing to SRT
 
+$transcodeMethod = $config.qualityMethod
+if ($transcodeMethod -eq $null){$transcodeMethod="CRF"}
+
+$speedProfile = $config.speedProfile
+if ($speedProfile -eq $null){$speedProfile="medium"}
+
 $x265CRF = $config.x265CRF 
+$videoBitrate = $config.targetBitrateV
+$audioBitrate = $config.targetBitrateA
+
+$cleanupSetting = $config.cleanupSetting
+if (($cleanupSetting -eq $null) -or ($cleanupSetting -gt 3)){$cleanupSetting=1}
 
 $LogPath = Join-Path $BaseDownloadPath $config.LogPath 
 
+#add visual basic so we can send fiels to recylce bin
+Add-Type -AssemblyName Microsoft.VisualBasic
+#endregion
+#=================================================#
+#                HANDY FUNCTIONS                  #
+#=================================================#
+#region declare functions
+function Compare-VideoDurations {
+    param (
+        [string]$ffprobePath,
+        [string]$inputPath,
+        [string]$outputPath
+    )
+    # usage example | $durationMatch, $inputDuration, $outputDuration = Compare-VideoDurations -inputPath $inputFile -outputPath $outputFile
+
+    #default ffprobe if not provided
+    write-host "probe $($ffprobePath)"
+    if ([string]::IsNullOrEmpty($ffprobePath)){$ffprobePath="ffprobe.exe"}
+
+    # Check if ffprobe is available
+    #if (-not (Test-Path $ffprobePath)) {
+     #   Write-Host "Error: ffprobe is not found. Please make sure it's installed and in the system PATH." -ForegroundColor Red
+      #  return
+    #}
+
+    # Get duration of input video
+    $inputDuration = & $ffprobePath -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $inputPath
+
+    # Get duration of output video
+    $outputDuration = & $ffprobePath -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 $outputPath
+
+    # Compare durations
+    if ($inputDuration -eq $outputDuration) {
+        Write-Host "The durations are equal: $($inputDuration) seconds." -ForegroundColor Green
+        $duarionMatch = $true
+    } else {
+        Write-Host "The durations are not equal." -ForegroundColor Red
+        Write-Host "Input video duration: $($inputDuration) seconds" -ForegroundColor Yellow
+        Write-Host "Output video duration: $($outputDuration) seconds" -ForegroundColor Yellow
+        $durationMatch = $false
+    }
+    return $durationMatch, $inputDuration, $outputDuration
+}
+
+function compare-FileSize {
+    param (
+        [string]$inputPath,
+        [string]$outputPath
+    )
+    # usage example | $inputKB, $outputKB, $diffPercent = compare-FileSize -inputPath $inputFile -outputPath $outputFile
+    $inputSize = (Get-ChildItem $inputPath).Length
+    $inputKB = $([math]::Round($inputSize/1KB,2))
+    $outputSize= (Get-ChildItem $outputPath).Length
+    $outputKB = $([math]::Round($outputSize/1KB,2))
+    $differenceKB = [math]::Round($outputKB-$inputKB,2)
+    $differencePercent = [math]::Round(($outputSize/$inputSize)*100,2)
+    write-host $testVar "hi"
+    return $inputKB, $outputKB, $differencePercent
+}
+
+function move-finishedFile {
+  param (
+        [string]$cleanupOption,
+        [string]$startingFile,
+        [string]$finishedFile
+    )
+#example usage | $moveResult, $finalPlace = move-finishedFile -cleanupOption 2 -startingFile $inputFile -finishedFile $outputFile
+#add visual basic so we can send files to recylce bin
+Add-Type -AssemblyName Microsoft.VisualBasic
+    $moveResult = $null
+        
+    if ([string]::IsNullOrEmpty($doneFolder)){$doneFolder="done"}
+
+    #get the done path 
+    $workingFolder=split-path -path $startingFile
+    $funcDonePath = join-path $workingFolder $DoneFolder
+    
+    #override cleanup setting if 2 and no comparison was provided
+    if (($cleanupOption -eq 2) -and ([string]::IsNullOrEmpty($finishedFile))){$cleanupOption=3}
+    
+    #cleanup the input file
+    if ($cleanupOption -eq 1) {
+    #move file to Output Path
+    move-item -literalpath $startingFile -destination $funcDonePath
+    $moveResult = "Moved $($startingFile.name) to $funcDonePath"
+    $finalRestingPlace="Done"
+    } elseif ($cleanupOption -eq 2) {
+    #move file to recycle bin if output is smaller
+    write-host "Comparing file size..."
+    $inputKB, $outputKB, $diffPercent = compare-FileSize -inputPath $startingFile -outputPath $finishedFile
+    write-host $diffPercent
+        if ($diffPercent -le 100) {
+        [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($startingFile,'OnlyErrorDialogs','SendToRecycleBin')
+        $moveResult = "Output file is smaller than original, sent original to Recycle Bin"
+        $finalRestingPlace="Recycle Bin"
+        } else {
+        #move file to Output Path
+            
+            move-item -literalpath $startingFile -destination $funcDonePath
+            $moveResult = "Output file is larger than original. Moved original to $($funcDonePath)"
+            $finalRestingPlace="Done"
+            }
+    } elseif ($cleanupOption -eq 3) {
+    #move file to recylce bin
+    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($startingFile,'OnlyErrorDialogs','SendToRecycleBin')
+    $moveResult = "Moved $($startingFile.name) to Recycle Bin"
+    $finalRestingPlace="Recycle Bin"
+    } else {
+    $moveResult="Couldn't do anything with $($startingFile)"
+    $finalRestingPlace="Unmoved"
+    write-host "`'$($cleanupOption)`'"
+    }
+    $finalCleanupSetting = $cleanupOption
+    write-host $moveResult
+    return $moveResult, $finalRestingPlace
+}
+
+function write-TranscodeLog {
+  param (
+        [string]$logPath,
+        [string]$startingFile,
+        [string]$finishedFile,
+        [string]$ffprobePath,
+        [string]$startTime,
+        [string]$endTime,
+        [string]$originalSentTo
+        )
+ write-host "probe $($ffprobepath)"
+#default ffprobe if not provided
+if ([string]::IsNullOrEmpty($ffprobePath)){$ffprobePath="ffprobe.exe"}
+write-host $logpath
+$pathThere = test-path -path $logPath -PathType Leaf
+write-host $pathThere
+#create the log if it doesn't exist
+if (-not (test-path -path $logPath -PathType Leaf)) {
+ $newLogHeader = "fileName,startTime,finishTime,inputDuration,inputSizeKB,outputDuration,outputSizeKB,sizeDifference,inputMovedTo"
+ write-host $newLogHeader
+ New-Item -ItemType File -Path $logPath
+ out-file $logPath -InputObject $newLogHeader -Encoding UTF8
+}
+
+#isolate the file name 
+    $fileName = Split-Path -Leaf $startingFile
+
+#if provided, only write inputMovedTo
+if (-not([string]::IsNullOrEmpty(($originalSentTo)))) {
+    write-host "moved"
+    $inputMovedTo = "$($originalSentTo) - $($finishedFile)"
+    } else {
+    
+    #get the durations
+    $durationMatch, $inputDuration, $outputDuration = Compare-VideoDurations -inputPath $startingFile -outputPath $finishedFile -ffprobePath $ffprobePath
+    #get the sizes
+    $inputKB, $outputKB, $diffPercent = compare-FileSize -inputPath $inputFile -outputPath $outputFile
+
+    #build the new log row
+    $inputDurationSec = "$([math]::round($inputDuration,2)) sec"
+    $outputDurationSec = "$([math]::round($outputDuration,2)) sec"
+    $inputSizeKB = "$($inputKB) KB"
+    $outputSizeKB = "$($outputKB) KB"
+    $sizeDifference = "$($diffPercent)%"
+    }
+
+$newLogRow = "$($fileName),$($startTime),$($endTime),$($inputDurationSec),$($inputSizeKB),$($outputDurationSec),$($outputSizeKB),$($sizeDifference),$($inputMovedTo)"
+ out-file $logPath -InputObject $newLogRow -Encoding UTF8 -Append
+}
+
+#endregion
 #=================================================#
 #                EXECUTION START                  #
 #=================================================#
-
+#region starting declarations
 #get all the folders in the base directory
 $folderList = get-childitem $BaseDownloadPath -Directory
 
+#build the ffmpeg base argument with the specified settings
+if ($transcodeMethod -eq "CRF") {
+$baseQualityArg = "-preset $($speedProfile) -c:v libx265 -crf $($x265CRF) -vtag hvc1"
+} elseif ($transcodeMethod -eq "ABR") {
+$baseQualityArgP1 = "-preset $($speedProfile) -c:v libx265 -b:v $($targetBitrate) -x265-params pass=1 -an -f null NUL"
+$baseQualityArgP2 = "-preset $($speedProfile) -c:v libx265 -b:v $($targetBitrate) -x265-params pass=2 -c:a aac -b:a $($targetBitrateAudio)"
+} else { throw "Invalid argument $($transcodeMethod) provided for qualityMethod"
+}
+#endregion
+
 #iterate each folder
 foreach ($folder in $folderList) {
+    #region log and reset
     write-host "======="
     write-host $folder.FullName
     write-host "======="
@@ -105,8 +298,10 @@ foreach ($folder in $folderList) {
     $currDoneDir = join-path $fullFolderPath $DoneFolder
     $currOutDir = join-path $fullFolderPath $OutFolder
     $currDoneSubsDir = [IO.Path]::Combine($fullFolderPath,$DoneFolder,$SubsWorkFolder)
+    #endregion
 
     #make sure working directories within each folder are created
+    #region pathtests
     If(!(test-path -PathType container $mp4SubWorkDir)) #make sure \subs folder exists
         {
         New-Item -ItemType Directory -Path $mp4SubWorkDir
@@ -131,6 +326,7 @@ foreach ($folder in $folderList) {
         {
         New-Item -ItemType Directory -Path $currDoneSubsDir
         }
+        #endregion
 
     #get folder contents
     $subfolderContents = Get-ChildItem $fullFolderPath -Attributes !Directory
@@ -145,10 +341,11 @@ foreach ($folder in $folderList) {
 
             #see if current file is one of the defined video formats
             $isAVideo = ($otherVideoFormats | %{$fileNameExt.contains($_)}) -contains $true
-            write-host "is a video? "$isAVideo
+            write-host "is a video? $($isAVideo)"
 
-            write-host $item.fullname " " $fileNameExt
+            write-host "$($item.fullname) $($fileNameExt)"
 
+            #region handle subtitles
             #see if the file is an en.mp4-formatted subtitle, and if so convert to SRT
             if ($fileNameExt.Contains(".en.mp4")) {
                 write-host "Found subtitle "$fileNameExt
@@ -216,7 +413,9 @@ foreach ($folder in $folderList) {
             $srtDonePath = join-path $currOutDir $fileNameExt
             move-item -LiteralPath $fullFileName -Destination $srtDonePath
             }
+            #endregion
 
+            #region handle videos
             #transcode mkv with contained streams to x265 MKV and move old file to /done
             elseif ($fileNameExt.Contains(".mkv")) {
 
@@ -229,11 +428,29 @@ foreach ($folder in $folderList) {
                 write-host $currEpisodeDone
                 write-host $currEpisodeOut
                 
+                $startTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
                 #do ffmmpeg steps
-                $ffmpegArgs = "-i `"$($currEpisodeIn)`" -map 0 -c:a copy -c:s copy -c:v libx265 -crf $($x265CRF) -vtag hvc1 `"$($currEpisodeOut)`""
+                if ($transcodeMethod -eq "CRF") {
+
+                $ffmpegArgs = "-i `"$($currEpisodeIn)`" -map 0 -c:a copy -c:s copy $($baseQualityArg) `"$($currEpisodeOut)`""
                 write-host $ffmpegArgs
                 $ffmpegProcess = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgs -NoNewWindow -Wait -PassThru
-                move-item -literalpath $currEpisodeIn -destination $currEpisodeDone
+                
+                } elseif ($transcodeMethod -eq "ABR") {
+
+                $ffmpegArgsP1 = "-y -i `"$($currEpisodeIn)`" -map 0 -c:a copy -c:s copy $($baseQualityArgP1)"
+                $ffmpegArgsP2 = "-i `"$($currEpisodeIn)`" -map 0 -c:a copy -c:s copy $($baseQualityArgP2) `"$($currEpisodeOut)`""
+                write-host $ffmpegArgsP1
+                $ffmpegProcess1 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP1 -NoNewWindow -Wait -PassThru
+                $ffmpegProcess2 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP2 -NoNewWindow -Wait -PassThru
+               
+                }
+                
+                $endTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
+                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -finishedFile $outputFile -ffprobePath $ffprobe -startTime $startTimeStr -endTime $endTimeStr
+
+                $moveResult, $finalPlace = move-finishedFile -cleanupOption $cleanu -startingFile $inputFile -finishedFile $outputFile
+                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -originalSentTo $moveResult -finishedFile $outputFile
              }
             
             #transcode other video files to x265 and move old file to /done
@@ -247,12 +464,31 @@ foreach ($folder in $folderList) {
                 write-host $currEpisodeDone
                 write-host $currEpisodeOut
                 
+                $startTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
                 #do ffmmpeg steps
-                $ffmpegArgs = "-i `"$($currEpisodeIn)`" -c:v libx265 -crf $($x265CRF) -vtag hvc1 `"$($currEpisodeOut)`""
+                if ($transcodeMethod -eq "CRF") {
+
+                $ffmpegArgs = "-i `"$($currEpisodeIn)`" $($baseQualityArg) `"$($currEpisodeOut)`""
                 write-host $ffmpegArgs
                 $ffmpegProcess = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgs -NoNewWindow -Wait -PassThru
-                move-item -literalpath $currEpisodeIn -destination $currEpisodeDone
+                
+                } elseif ($transcodeMethod -eq "ABR") {
+                
+                $ffmpegArgsP1 = "-y -i `"$($currEpisodeIn)`" $($baseQualityArgP1)"
+                $ffmpegArgsP2 = "-i `"$($currEpisodeIn)`" $($baseQualityArgP2) `"$($currEpisodeOut)`""
+                
+                $ffmpegProcess1 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP1 -NoNewWindow -Wait -PassThru
+                $ffmpegProcess2 = Start-Process -FilePath $ffmpegPath -ArgumentList $ffmpegArgsP2 -NoNewWindow -Wait -PassThru
+
                 }
+                
+                $endTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
+                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -finishedFile $outputFile -ffprobePath $ffprobe -startTime $startTimeStr -endTime $endTimeStr
+
+                $moveResult, $finalPlace = move-finishedFile -cleanupOption $cleanu -startingFile $inputFile -finishedFile $outputFile
+                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -originalSentTo $moveResult -finishedFile $outputFile
+              }
+            #endregion
 
             #log other files that can't be handled
             else {
