@@ -89,8 +89,8 @@ $audioBitrate = $config.targetBitrateA
 $cleanupSetting = $config.cleanupSetting
 if (($cleanupSetting -eq $null) -or ($cleanupSetting -gt 3)){$cleanupSetting=1}
 
-$LogPath = Join-Path $BaseDownloadPath $config.LogPath 
-
+$LogPath = $config.LogPath 
+write-host $LogPath
 #add visual basic so we can send fiels to recylce bin
 Add-Type -AssemblyName Microsoft.VisualBasic
 #endregion
@@ -141,9 +141,9 @@ function compare-FileSize {
         [string]$outputPath
     )
     # usage example | $inputKB, $outputKB, $diffPercent = compare-FileSize -inputPath $inputFile -outputPath $outputFile
-    $inputSize = (Get-ChildItem $inputPath).Length
+    $inputSize = (Get-ChildItem -LiteralPath $inputPath).Length
     $inputKB = $([math]::Round($inputSize/1KB,2))
-    $outputSize= (Get-ChildItem $outputPath).Length
+    $outputSize= (Get-ChildItem -LiteralPath $outputPath).Length
     $outputKB = $([math]::Round($outputSize/1KB,2))
     $differenceKB = [math]::Round($outputKB-$inputKB,2)
     $differencePercent = [math]::Round(($outputSize/$inputSize)*100,2)
@@ -244,7 +244,7 @@ if (-not([string]::IsNullOrEmpty(($originalSentTo)))) {
     #get the durations
     $durationMatch, $inputDuration, $outputDuration = Compare-VideoDurations -inputPath $startingFile -outputPath $finishedFile -ffprobePath $ffprobePath
     #get the sizes
-    $inputKB, $outputKB, $diffPercent = compare-FileSize -inputPath $inputFile -outputPath $outputFile
+    $inputKB, $outputKB, $diffPercent = compare-FileSize -inputPath $startingFile -outputPath $finishedFile
 
     #build the new log row
     $inputDurationSec = "$([math]::round($inputDuration,2)) sec"
@@ -428,7 +428,7 @@ foreach ($folder in $folderList) {
                 write-host $currEpisodeDone
                 write-host $currEpisodeOut
                 
-                $startTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
+                $startTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm"
                 #do ffmmpeg steps
                 if ($transcodeMethod -eq "CRF") {
 
@@ -446,11 +446,11 @@ foreach ($folder in $folderList) {
                
                 }
                 
-                $endTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
-                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -finishedFile $outputFile -ffprobePath $ffprobe -startTime $startTimeStr -endTime $endTimeStr
+                $endTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm"
+                write-TranscodeLog -logPath $logPath -startingFile $currEpisodeIn -finishedFile $currEpisodeOut -ffprobePath $ffprobepath -startTime $startTimeStr -endTime $endTimeStr
 
-                $moveResult, $finalPlace = move-finishedFile -cleanupOption $cleanu -startingFile $inputFile -finishedFile $outputFile
-                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -originalSentTo $moveResult -finishedFile $outputFile
+                $moveResult, $finalPlace = move-finishedFile -cleanupOption $cleanupSetting -startingFile $currEpisodeIn -finishedFile $currEpisodeOut
+                write-TranscodeLog -logPath $logPath -startingFile $currEpisodeIn -finishedFile $currEpisodeOut -originalSentTo $moveResult 
              }
             
             #transcode other video files to x265 and move old file to /done
@@ -464,7 +464,7 @@ foreach ($folder in $folderList) {
                 write-host $currEpisodeDone
                 write-host $currEpisodeOut
                 
-                $startTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
+                $startTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm"
                 #do ffmmpeg steps
                 if ($transcodeMethod -eq "CRF") {
 
@@ -482,11 +482,11 @@ foreach ($folder in $folderList) {
 
                 }
                 
-                $endTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm K"
-                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -finishedFile $outputFile -ffprobePath $ffprobe -startTime $startTimeStr -endTime $endTimeStr
+                $endTimeStr = Get-Date -Format "yyyy/MM/dd HH:mm"
+                write-TranscodeLog -logPath $logPath -startingFile $currEpisodeIn -finishedFile $currEpisodeOut -ffprobePath $ffprobepath -startTime $startTimeStr -endTime $endTimeStr
 
-                $moveResult, $finalPlace = move-finishedFile -cleanupOption $cleanu -startingFile $inputFile -finishedFile $outputFile
-                write-TranscodeLog -logPath $logFilePath -startingFile $inputFile -originalSentTo $moveResult -finishedFile $outputFile
+                $moveResult, $finalPlace = move-finishedFile -cleanupOption $cleanupSetting -startingFile $currEpisodeIn -finishedFile $currEpisodeOut
+                write-TranscodeLog -logPath $logPath -startingFile $currEpisodeIn -finishedFile $currEpisodeOut -originalSentTo $moveResult 
               }
             #endregion
 
@@ -498,3 +498,4 @@ foreach ($folder in $folderList) {
             
     write-host "///////"
 }
+#Read-Host -Prompt "Press Enter to exit"
