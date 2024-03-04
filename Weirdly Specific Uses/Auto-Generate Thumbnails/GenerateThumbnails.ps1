@@ -25,7 +25,7 @@
 # and what each does
 
 Clear-Host # reset the console window, helps with debugging in Powershell ISE
-
+$host.ui.RawUI.WindowTitle = “Auto-Gen Thumbnails - PlexPals”
 # read the global config file
 #region find global config
 #Look for the Global Config in parent directories

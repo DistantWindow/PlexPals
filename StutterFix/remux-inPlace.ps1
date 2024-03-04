@@ -1,4 +1,5 @@
 clear-host
+$host.ui.RawUI.WindowTitle = “StutterFix (In-Place) - PlexPals”
 # Define the path to mkvmerge
 $mkvmergePath = "F:\Programs\MKVToolNix\mkvmerge.exe"
 

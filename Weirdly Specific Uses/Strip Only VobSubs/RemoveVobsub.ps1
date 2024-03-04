@@ -34,7 +34,7 @@
 # and what each does
 
 Clear-Host # reset the console window, helps with debugging in Powershell ISE
-
+$host.ui.RawUI.WindowTitle = “Strip Only VobSubs - PlexPals”
 # find and read the global config
 #region find global config
 #Look for the Global Config in parent directories

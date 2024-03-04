@@ -22,11 +22,33 @@
 # and what each does
 
 Clear-Host # reset the console window, helps with debugging in Powershell ISE
-
+$host.ui.RawUI.WindowTitle = “StutterFix Batch - PlexPals”
 # read the global config file
-$currPath = Get-Location
-$parentPath = Split-Path -Path $currPath -Parent
-$globalConfigFile = Join-Path $parentPath "PlexPal_GlobalConfig.ini"
+#region Look for the Global Config in parent directories
+write-host "Looking for Global Config file..."
+$targetFile = "PlexPal_GlobalConfig.ini"
+$nextParent  = Get-Location
+$globalConfigFile = join-path $nextParent $targetFile
+$configFound = Test-Path -Path $globalConfigFile
+
+#if not found at the current location, go up levels until it is found
+while (-not ($configFound -eq $true)) {
+    try {
+    $nextParent = split-path $nextParent -Parent
+    $globalConfigFile = join-path $nextParent $targetFile
+    write-host "Config not found at $($globalConfigFile)"
+    
+    $configFound = Test-Path -Path $globalConfigFile
+    write-host "Checking in $($nextParent) next..."
+      if (([string]::IsNullOrEmpty($nextParent)) -or ([string]::IsNullOrWhitespace($nextParent))) {
+        throw "PlexPals Global Config could not be found"
+        }
+    } catch {
+        throw "PlexPals Global Config could not be found"   
+        }
+}
+write-host "Global config found at $($globalConfigFile)"
+#endregion
 Get-Content $globalConfigFile | foreach-object -begin {$gConfig=@{}} -process {
     $line = $_.Trim()
     if(-not $line.StartsWith("#") -and $line -notmatch '^\s*$' -and $line -notmatch '^\[') {
